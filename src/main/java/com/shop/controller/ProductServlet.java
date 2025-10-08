@@ -1,0 +1,216 @@
+package com.shop.controller;
+
+import com.shop.dao.ProductDAO;
+import com.shop.model.Product;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.util.List;
+
+@WebServlet("/products")
+public class ProductServlet extends HttpServlet {
+    private ProductDAO productDAO;
+
+    @Override
+    public void init() throws ServletException {
+        productDAO = new ProductDAO();
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String action = request.getParameter("action");
+        if (action == null) action = "list";
+
+        try {
+            switch (action) {
+                case "new":
+                    showNewForm(request, response);
+                    break;
+                case "edit":
+                    showEditForm(request, response);
+                    break;
+                case "delete":
+                    deleteProduct(request, response);
+                    break;
+                case "statistics":
+                    showStatistics(request, response);
+                    break;
+                default:
+                    listProducts(request, response);
+                    break;
+            }
+        } catch (SQLException e) {
+            throw new ServletException("Database error", e);
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String action = request.getParameter("action");
+        if (action == null) action = "list";
+
+        try {
+            switch (action) {
+                case "insert":
+                    insertProduct(request, response);
+                    break;
+                case "update":
+                    updateProduct(request, response);
+                    break;
+                case "search":
+                    searchProducts(request, response);
+                    break;
+                default:
+                    listProducts(request, response);
+                    break;
+            }
+        } catch (SQLException e) {
+            throw new ServletException("Database error", e);
+        }
+    }
+
+    private void listProducts(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+
+        int page = 1;
+        int recordsPerPage = 10;
+
+        if (request.getParameter("page") != null) {
+            page = Integer.parseInt(request.getParameter("page"));
+        }
+
+        int offset = (page - 1) * recordsPerPage;
+        List<Product> products = productDAO.getAllProducts(offset, recordsPerPage);
+        int totalRecords = productDAO.getTotalProductsCount();
+        int totalPages = (int) Math.ceil((double) totalRecords / recordsPerPage);
+
+        request.setAttribute("products", products);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("currentPage", page);
+
+        request.getRequestDispatcher("/views/products.jsp").forward(request, response);
+    }
+
+    private void searchProducts(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+
+        String name = request.getParameter("name");
+        String code = request.getParameter("code");
+        String availableStr = request.getParameter("available");
+        String minPriceStr = request.getParameter("minPrice");
+        String maxPriceStr = request.getParameter("maxPrice");
+
+        Boolean available = null;
+        Double minPrice = null;
+        Double maxPrice = null;
+
+        if (availableStr != null && !availableStr.isEmpty()) {
+            available = Boolean.parseBoolean(availableStr);
+        }
+        if (minPriceStr != null && !minPriceStr.isEmpty()) {
+            minPrice = Double.parseDouble(minPriceStr);
+        }
+        if (maxPriceStr != null && !maxPriceStr.isEmpty()) {
+            maxPrice = Double.parseDouble(maxPriceStr);
+        }
+
+        int page = 1;
+        int recordsPerPage = 10;
+        if (request.getParameter("page") != null) {
+            page = Integer.parseInt(request.getParameter("page"));
+        }
+
+        int offset = (page - 1) * recordsPerPage;
+        List<Product> products = productDAO.searchProducts(name, code, available, minPrice, maxPrice, offset, recordsPerPage);
+        int totalRecords = productDAO.getTotalProductsCount(); // Для упрощения
+        int totalPages = (int) Math.ceil((double) totalRecords / recordsPerPage);
+
+        request.setAttribute("products", products);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("searchName", name);
+        request.setAttribute("searchCode", code);
+        request.setAttribute("searchAvailable", availableStr);
+        request.setAttribute("searchMinPrice", minPriceStr);
+        request.setAttribute("searchMaxPrice", maxPriceStr);
+
+        request.getRequestDispatcher("/views/products.jsp").forward(request, response);
+    }
+
+    private void showNewForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        request.getRequestDispatcher("/views/product-form.jsp").forward(request, response);
+    }
+
+    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+
+        int id = Integer.parseInt(request.getParameter("id"));
+        Product product = productDAO.getProductById(id);
+        request.setAttribute("product", product);
+        request.getRequestDispatcher("/views/product-form.jsp").forward(request, response);
+    }
+
+    private void insertProduct(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+
+        Product product = extractProductFromRequest(request);
+        productDAO.addProduct(product);
+        response.sendRedirect("products?message=Product added successfully");
+    }
+
+    private void updateProduct(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+
+        int id = Integer.parseInt(request.getParameter("id"));
+        Product product = extractProductFromRequest(request);
+        product.setProductId(id);
+        productDAO.updateProduct(product);
+        response.sendRedirect("products?message=Product updated successfully");
+    }
+
+    private void deleteProduct(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+
+        int id = Integer.parseInt(request.getParameter("id"));
+        productDAO.deleteProduct(id);
+        response.sendRedirect("products?message=Product deleted successfully");
+    }
+
+    private void showStatistics(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+
+        ProductDAO.ProductStatistics stats = productDAO.getProductStatistics();
+        request.setAttribute("stats", stats);
+        request.getRequestDispatcher("/views/product-statistics.jsp").forward(request, response);
+    }
+
+    private Product extractProductFromRequest(HttpServletRequest request) {
+        Product product = new Product();
+        product.setCode(request.getParameter("code"));
+        product.setProductName(request.getParameter("name"));
+        product.setProductPrice(new BigDecimal(request.getParameter("price")));
+
+        String lengthStr = request.getParameter("length");
+        if (lengthStr != null && !lengthStr.isEmpty()) {
+            product.setProductLength(new BigDecimal(lengthStr));
+        }
+
+        product.setProductQuantity(Integer.parseInt(request.getParameter("quantity")));
+        product.setProductAvailable(Boolean.parseBoolean(request.getParameter("available")));
+        product.setProductDescription(request.getParameter("description"));
+
+        return product;
+    }
+}
