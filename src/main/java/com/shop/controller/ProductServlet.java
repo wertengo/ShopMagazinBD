@@ -82,23 +82,33 @@ public class ProductServlet extends HttpServlet {
     private void listProducts(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, ServletException, IOException {
 
-        int page = 1;
-        int recordsPerPage = 10;
+        try {
+            int page = 1;
+            int recordsPerPage = 10;
 
-        if (request.getParameter("page") != null) {
-            page = Integer.parseInt(request.getParameter("page"));
+            if (request.getParameter("page") != null) {
+                page = Integer.parseInt(request.getParameter("page"));
+            }
+
+            int offset = (page - 1) * recordsPerPage;
+            List<Product> products = productDAO.getAllProducts(offset, recordsPerPage);
+            int totalRecords = productDAO.getTotalProductsCount();
+            int totalPages = (int) Math.ceil((double) totalRecords / recordsPerPage);
+
+            request.setAttribute("products", products);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("activePage", "products");
+            request.setAttribute("pageTitle", "Управление товарами");
+            request.setAttribute("contentPage", "/views/products-content.jsp");
+
+            request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Ошибка: " + e.getMessage());
+            request.getRequestDispatcher("/views/error.jsp").forward(request, response);
         }
-
-        int offset = (page - 1) * recordsPerPage;
-        List<Product> products = productDAO.getAllProducts(offset, recordsPerPage);
-        int totalRecords = productDAO.getTotalProductsCount();
-        int totalPages = (int) Math.ceil((double) totalRecords / recordsPerPage);
-
-        request.setAttribute("products", products);
-        request.setAttribute("totalPages", totalPages);
-        request.setAttribute("currentPage", page);
-
-        request.getRequestDispatcher("/views/products.jsp").forward(request, response);
     }
 
     private void searchProducts(HttpServletRequest request, HttpServletResponse response)
@@ -132,7 +142,7 @@ public class ProductServlet extends HttpServlet {
 
         int offset = (page - 1) * recordsPerPage;
         List<Product> products = productDAO.searchProducts(name, code, available, minPrice, maxPrice, offset, recordsPerPage);
-        int totalRecords = productDAO.getTotalProductsCount(); // Для упрощения
+        int totalRecords = productDAO.getTotalProductsCount();
         int totalPages = (int) Math.ceil((double) totalRecords / recordsPerPage);
 
         request.setAttribute("products", products);
@@ -143,14 +153,21 @@ public class ProductServlet extends HttpServlet {
         request.setAttribute("searchAvailable", availableStr);
         request.setAttribute("searchMinPrice", minPriceStr);
         request.setAttribute("searchMaxPrice", maxPriceStr);
+        request.setAttribute("activePage", "products");
+        request.setAttribute("pageTitle", "Управление товарами");
+        request.setAttribute("contentPage", "/views/products-content.jsp");
 
-        request.getRequestDispatcher("/views/products.jsp").forward(request, response);
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private void showNewForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        request.getRequestDispatcher("/views/product-form.jsp").forward(request, response);
+        request.setAttribute("activePage", "products");
+        request.setAttribute("pageTitle", "Добавление товара");
+        request.setAttribute("contentPage", "/views/product-form-content.jsp");
+
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
@@ -159,7 +176,11 @@ public class ProductServlet extends HttpServlet {
         int id = Integer.parseInt(request.getParameter("id"));
         Product product = productDAO.getProductById(id);
         request.setAttribute("product", product);
-        request.getRequestDispatcher("/views/product-form.jsp").forward(request, response);
+        request.setAttribute("activePage", "products");
+        request.setAttribute("pageTitle", "Редактирование товара");
+        request.setAttribute("contentPage", "/views/product-form-content.jsp");
+
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private void insertProduct(HttpServletRequest request, HttpServletResponse response)

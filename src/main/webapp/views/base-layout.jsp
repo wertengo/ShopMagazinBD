@@ -85,7 +85,8 @@
                 </div>
             </c:if>
 
-            <!-- Dynamic content will be included here -->
+            <!-- Dynamic content -->
+            <jsp:include page="${contentPage}"/>
         </main>
     </div>
 </div>

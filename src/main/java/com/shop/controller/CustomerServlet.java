@@ -93,8 +93,11 @@ public class CustomerServlet extends HttpServlet {
         request.setAttribute("customers", customers);
         request.setAttribute("totalPages", totalPages);
         request.setAttribute("currentPage", page);
+        request.setAttribute("activePage", "customers");
+        request.setAttribute("pageTitle", "Управление клиентами");
+        request.setAttribute("contentPage", "/views/customers-content.jsp");
 
-        request.getRequestDispatcher("/views/customers.jsp").forward(request, response);
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private void searchCustomers(HttpServletRequest request, HttpServletResponse response)
@@ -121,14 +124,21 @@ public class CustomerServlet extends HttpServlet {
         request.setAttribute("searchName", name);
         request.setAttribute("searchEmail", email);
         request.setAttribute("searchPhone", phone);
+        request.setAttribute("activePage", "customers");
+        request.setAttribute("pageTitle", "Управление клиентами");
+        request.setAttribute("contentPage", "/views/customers-content.jsp");
 
-        request.getRequestDispatcher("/views/customers.jsp").forward(request, response);
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private void showNewForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        request.getRequestDispatcher("/views/customer-form.jsp").forward(request, response);
+        request.setAttribute("activePage", "customers");
+        request.setAttribute("pageTitle", "Добавление клиента");
+        request.setAttribute("contentPage", "/views/customer-form-content.jsp");
+
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
@@ -137,15 +147,24 @@ public class CustomerServlet extends HttpServlet {
         int id = Integer.parseInt(request.getParameter("id"));
         Customer customer = customerDAO.getCustomerById(id);
         request.setAttribute("customer", customer);
-        request.getRequestDispatcher("/views/customer-form.jsp").forward(request, response);
+        request.setAttribute("activePage", "customers");
+        request.setAttribute("pageTitle", "Редактирование клиента");
+        request.setAttribute("contentPage", "/views/customer-form-content.jsp");
+
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private void insertCustomer(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, IOException {
 
         Customer customer = extractCustomerFromRequest(request);
-        customerDAO.addCustomer(customer);
-        response.sendRedirect("customers?message=Customer added successfully");
+        boolean success = customerDAO.addCustomer(customer);
+
+        if (success) {
+            response.sendRedirect(request.getContextPath() + "/customers?message=Клиент успешно добавлен");
+        } else {
+            response.sendRedirect(request.getContextPath() + "/customers?error=Ошибка при добавлении клиента");
+        }
     }
 
     private void updateCustomer(HttpServletRequest request, HttpServletResponse response)
@@ -154,8 +173,13 @@ public class CustomerServlet extends HttpServlet {
         int id = Integer.parseInt(request.getParameter("id"));
         Customer customer = extractCustomerFromRequest(request);
         customer.setCustomerId(id);
-        customerDAO.updateCustomer(customer);
-        response.sendRedirect("customers?message=Customer updated successfully");
+        boolean success = customerDAO.updateCustomer(customer);
+
+        if (success) {
+            response.sendRedirect(request.getContextPath() + "/customers?message=Клиент успешно обновлен");
+        } else {
+            response.sendRedirect(request.getContextPath() + "/customers?error=Ошибка при обновлении клиента");
+        }
     }
 
     private void deleteCustomer(HttpServletRequest request, HttpServletResponse response)

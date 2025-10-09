@@ -42,19 +42,16 @@ public class DashboardServlet extends HttpServlet {
             request.setAttribute("pageTitle", "Панель управления");
             request.setAttribute("contentPage", "/views/dashboard-content.jsp");
 
-            request.getRequestDispatcher("/views/base.jsp").forward(request, response);
+            request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
 
         } catch (SQLException e) {
-            throw new ServletException("Database error", e);
+            e.printStackTrace();
+            request.setAttribute("error", "Ошибка базы данных: " + e.getMessage());
+            request.getRequestDispatcher("/views/error.jsp").forward(request, response);
         } catch (Exception e) {
-            // Если есть проблемы с БД, устанавливаем значения по умолчанию
-            request.setAttribute("productStats", new ProductDAO.ProductStatistics());
-            request.setAttribute("orderStats", new OrderDAO.OrderStatistics());
-            request.setAttribute("customerStats", new CustomerStatistics(0));
-            request.setAttribute("activePage", "dashboard");
-            request.setAttribute("pageTitle", "Панель управления");
-            request.setAttribute("contentPage", "/views/dashboard-content.jsp");
-            request.getRequestDispatcher("/views/base.jsp").forward(request, response);
+            e.printStackTrace();
+            request.setAttribute("error", "Ошибка приложения: " + e.getMessage());
+            request.getRequestDispatcher("/views/error.jsp").forward(request, response);
         }
     }
 

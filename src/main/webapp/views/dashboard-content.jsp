@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <div class="row">
     <div class="col-md-3 mb-4">
         <div class="card stat-card bg-primary text-white">
@@ -37,7 +38,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h4 class="card-title">${orderStats.totalOrders}</h4>
-                        <p class="card-text">Заказов</p>
+                        <p class="card-text">Заказы</p>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-shopping-cart fa-2x"></i>
@@ -51,7 +52,12 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h4 class="card-title">${orderStats.totalRevenue != null ? orderStats.totalRevenue : '0'} ₽</h4>
+                        <h4 class="card-title">
+                            <c:if test="${not empty orderStats.totalRevenue}">
+                                <fmt:formatNumber value="${orderStats.totalRevenue}" pattern="#,##0.00"/> ₽
+                            </c:if>
+                            <c:if test="${empty orderStats.totalRevenue}">0 ₽</c:if>
+                        </h4>
                         <p class="card-text">Общий доход</p>
                     </div>
                     <div class="align-self-center">
@@ -82,14 +88,10 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         Средняя цена
                         <span class="badge bg-info rounded-pill">
-                            <c:choose>
-                                <c:when test="${productStats.averagePrice != null}">
-                                    ${productStats.averagePrice} ₽
-                                </c:when>
-                                <c:otherwise>
-                                    0 ₽
-                                </c:otherwise>
-                            </c:choose>
+                            <c:if test="${not empty productStats.averagePrice}">
+                                <fmt:formatNumber value="${productStats.averagePrice}" pattern="#,##0.00"/> ₽
+                            </c:if>
+                            <c:if test="${empty productStats.averagePrice}">0 ₽</c:if>
                         </span>
                     </li>
                 </ul>
@@ -114,14 +116,10 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         Средний чек
                         <span class="badge bg-info rounded-pill">
-                            <c:choose>
-                                <c:when test="${orderStats.averageOrderValue != null}">
-                                    ${orderStats.averageOrderValue} ₽
-                                </c:when>
-                                <c:otherwise>
-                                    0 ₽
-                                </c:otherwise>
-                            </c:choose>
+                            <c:if test="${not empty orderStats.averageOrderValue}">
+                                <fmt:formatNumber value="${orderStats.averageOrderValue}" pattern="#,##0.00"/> ₽
+                            </c:if>
+                            <c:if test="${empty orderStats.averageOrderValue}">0 ₽</c:if>
                         </span>
                     </li>
                 </ul>
