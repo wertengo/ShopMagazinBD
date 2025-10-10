@@ -1,5 +1,32 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+
+<!-- Сообщения об успехе/ошибке -->
+<c:if test="${not empty message}">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i>
+        <c:choose>
+            <c:when test="${message == 'Customer added successfully'}">Клиент успешно добавлен</c:when>
+            <c:when test="${message == 'Customer updated successfully'}">Клиент успешно обновлен</c:when>
+            <c:when test="${message == 'Customer deleted successfully'}">Клиент успешно удален</c:when>
+            <c:otherwise>${message}</c:otherwise>
+        </c:choose>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
+<c:if test="${not empty error}">
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <c:choose>
+            <c:when test="${error == 'Delete failed'}">Ошибка при удалении клиента</c:when>
+            <c:when test="${error == 'Delete error'}">Ошибка при удалении клиента</c:when>
+            <c:otherwise>${error}</c:otherwise>
+        </c:choose>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
 <div class="d-flex justify-content-between mb-3">
     <div>
         <a href="customers?action=new" class="btn btn-success">

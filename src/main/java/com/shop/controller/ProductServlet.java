@@ -214,23 +214,65 @@ public class ProductServlet extends HttpServlet {
 
         ProductDAO.ProductStatistics stats = productDAO.getProductStatistics();
         request.setAttribute("stats", stats);
-        request.getRequestDispatcher("/views/product-statistics.jsp").forward(request, response);
+        request.setAttribute("activePage", "products");
+        request.setAttribute("pageTitle", "Статистика товаров");
+        request.setAttribute("contentPage", "/views/product-statistics-content.jsp");
+
+        request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
     private Product extractProductFromRequest(HttpServletRequest request) {
         Product product = new Product();
-        product.setCode(request.getParameter("code"));
-        product.setProductName(request.getParameter("name"));
-        product.setProductPrice(new BigDecimal(request.getParameter("price")));
+
+        // Валидация и установка значений
+        String code = request.getParameter("code");
+        if (code != null && !code.trim().isEmpty()) {
+            product.setCode(code.trim());
+        }
+
+        String name = request.getParameter("name");
+        if (name != null && !name.trim().isEmpty()) {
+            product.setProductName(name.trim());
+        }
+
+        String priceStr = request.getParameter("price");
+        if (priceStr != null && !priceStr.isEmpty()) {
+            try {
+                product.setProductPrice(new BigDecimal(priceStr));
+            } catch (NumberFormatException e) {
+                product.setProductPrice(BigDecimal.ZERO);
+            }
+        }
 
         String lengthStr = request.getParameter("length");
         if (lengthStr != null && !lengthStr.isEmpty()) {
-            product.setProductLength(new BigDecimal(lengthStr));
+            try {
+                product.setProductLength(new BigDecimal(lengthStr));
+            } catch (NumberFormatException e) {
+                product.setProductLength(null);
+            }
         }
 
-        product.setProductQuantity(Integer.parseInt(request.getParameter("quantity")));
-        product.setProductAvailable(Boolean.parseBoolean(request.getParameter("available")));
-        product.setProductDescription(request.getParameter("description"));
+        String quantityStr = request.getParameter("quantity");
+        if (quantityStr != null && !quantityStr.isEmpty()) {
+            try {
+                product.setProductQuantity(Integer.parseInt(quantityStr));
+            } catch (NumberFormatException e) {
+                product.setProductQuantity(0);
+            }
+        }
+
+        String availableStr = request.getParameter("available");
+        if (availableStr != null && !availableStr.isEmpty()) {
+            product.setProductAvailable(Boolean.parseBoolean(availableStr));
+        } else {
+            product.setProductAvailable(false);
+        }
+
+        String description = request.getParameter("description");
+        if (description != null && !description.trim().isEmpty()) {
+            product.setProductDescription(description.trim());
+        }
 
         return product;
     }

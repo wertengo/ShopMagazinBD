@@ -155,49 +155,117 @@ public class CustomerServlet extends HttpServlet {
     }
 
     private void insertCustomer(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
+            throws SQLException, IOException, ServletException {
 
-        Customer customer = extractCustomerFromRequest(request);
-        boolean success = customerDAO.addCustomer(customer);
+        System.out.println("=== НАЧАЛО INSERT CUSTOMER ===");
 
-        if (success) {
-            response.sendRedirect(request.getContextPath() + "/customers?message=Клиент успешно добавлен");
-        } else {
-            response.sendRedirect(request.getContextPath() + "/customers?error=Ошибка при добавлении клиента");
+        try {
+            Customer customer = extractCustomerFromRequest(request);
+            System.out.println("Данные клиента получены: " + customer.getCustomerName() + " " + customer.getCustomerLastName());
+
+            boolean success = customerDAO.addCustomer(customer);
+            System.out.println("Результат добавления в БД: " + success);
+
+            if (success) {
+                System.out.println("Успешное добавление, перенаправляем на /customers");
+                // ИСПОЛЬЗУЙТЕ АНГЛИЙСКИЙ ТЕКСТ ДЛЯ ПАРАМЕТРОВ
+                response.sendRedirect("customers?message=Customer+added+successfully");
+                System.out.println("Перенаправление выполнено");
+                return;
+            } else {
+                System.out.println("Ошибка при добавлении в БД");
+                request.setAttribute("error", "Ошибка при добавлении клиента");
+            }
+        } catch (Exception e) {
+            System.err.println("ОШИБКА в insertCustomer: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("error", "Ошибка при добавлении клиента: " + e.getMessage());
         }
+
+        // Если дошли сюда, значит была ошибка - показываем форму снова
+        System.out.println("Показываем форму с ошибкой");
+        showNewForm(request, response);
     }
 
     private void updateCustomer(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
+            throws SQLException, IOException, ServletException {
 
-        int id = Integer.parseInt(request.getParameter("id"));
-        Customer customer = extractCustomerFromRequest(request);
-        customer.setCustomerId(id);
-        boolean success = customerDAO.updateCustomer(customer);
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Customer customer = extractCustomerFromRequest(request);
+            customer.setCustomerId(id);
+            boolean success = customerDAO.updateCustomer(customer);
 
-        if (success) {
-            response.sendRedirect(request.getContextPath() + "/customers?message=Клиент успешно обновлен");
-        } else {
-            response.sendRedirect(request.getContextPath() + "/customers?error=Ошибка при обновлении клиента");
+            if (success) {
+                // АНГЛИЙСКИЙ ТЕКСТ
+                response.sendRedirect("customers?message=Customer+updated+successfully");
+            } else {
+                request.setAttribute("error", "Ошибка при обновлении клиента");
+                request.setAttribute("customer", customer);
+                showEditForm(request, response);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Ошибка при обновлении клиента: " + e.getMessage());
+            showEditForm(request, response);
         }
     }
 
     private void deleteCustomer(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
+            throws SQLException, IOException, ServletException {
 
-        int id = Integer.parseInt(request.getParameter("id"));
-        customerDAO.deleteCustomer(id);
-        response.sendRedirect("customers?message=Customer deleted successfully");
+        System.out.println("=== НАЧАЛО DELETE CUSTOMER ===");
+
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            System.out.println("Удаление клиента с ID: " + id);
+
+            boolean success = customerDAO.deleteCustomer(id);
+            System.out.println("Результат удаления из БД: " + success);
+
+            if (success) {
+                System.out.println("Успешное удаление, перенаправляем на /customers");
+                // АНГЛИЙСКИЙ ТЕКСТ
+                response.sendRedirect("customers?message=Customer+deleted+successfully");
+                System.out.println("Перенаправление выполнено");
+            } else {
+                System.out.println("Ошибка при удалении из БД");
+                response.sendRedirect("customers?error=Delete+failed");
+            }
+        } catch (Exception e) {
+            System.err.println("ОШИБКА в deleteCustomer: " + e.getMessage());
+            e.printStackTrace();
+            response.sendRedirect("customers?error=Delete+error");
+        }
     }
 
     private Customer extractCustomerFromRequest(HttpServletRequest request) {
         Customer customer = new Customer();
-        customer.setCustomerName(request.getParameter("firstName"));
-        customer.setCustomerLastName(request.getParameter("lastName"));
-        customer.setCustomerSurname(request.getParameter("surname"));
-        customer.setCustomerAddress(request.getParameter("address"));
-        customer.setCustomerPhoneNumber(request.getParameter("phone"));
-        customer.setCustomerEmail(request.getParameter("email"));
+
+        // Получаем данные из формы
+        String firstName = request.getParameter("firstName");
+        String lastName = request.getParameter("lastName");
+        String surname = request.getParameter("surname");
+        String address = request.getParameter("address");
+        String phone = request.getParameter("phone");
+        String email = request.getParameter("email");
+
+        System.out.println("Параметры формы:");
+        System.out.println("firstName: " + firstName);
+        System.out.println("lastName: " + lastName);
+        System.out.println("surname: " + surname);
+        System.out.println("address: " + address);
+        System.out.println("phone: " + phone);
+        System.out.println("email: " + email);
+
+        // Устанавливаем значения с проверкой на null
+        customer.setCustomerName(firstName != null ? firstName.trim() : "");
+        customer.setCustomerLastName(lastName != null ? lastName.trim() : "");
+        customer.setCustomerSurname(surname != null ? surname.trim() : "");
+        customer.setCustomerAddress(address != null ? address.trim() : "");
+        customer.setCustomerPhoneNumber(phone != null ? phone.trim() : "");
+        customer.setCustomerEmail(email != null ? email.trim() : "");
+
         return customer;
     }
 }

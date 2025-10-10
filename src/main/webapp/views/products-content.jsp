@@ -132,25 +132,68 @@
             </table>
         </div>
 
-        <!-- Пагинация -->
+        <!-- УЛУЧШЕННАЯ ПАГИНАЦИЯ -->
         <c:if test="${totalPages > 1}">
             <nav aria-label="Page navigation">
                 <ul class="pagination justify-content-center">
+                    <!-- Стрелка "Назад" -->
                     <li class="page-item <c:if test="${currentPage == 1}">disabled</c:if>">
-                        <a class="page-link" href="products?page=${currentPage - 1}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">Предыдущая</a>
+                        <a class="page-link" href="products?page=${currentPage - 1}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
                     </li>
 
-                    <c:forEach begin="1" end="${totalPages}" var="i">
+                    <!-- Первая страница -->
+                    <c:if test="${currentPage > 6}">
+                        <li class="page-item">
+                            <a class="page-link" href="products?page=1<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">1</a>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    </c:if>
+
+                    <!-- Основные страницы (максимум 10) -->
+                    <c:set var="startPage" value="${currentPage - 5}"/>
+                    <c:set var="endPage" value="${currentPage + 4}"/>
+
+                    <c:if test="${startPage < 1}">
+                        <c:set var="startPage" value="1"/>
+                    </c:if>
+
+                    <c:if test="${endPage > totalPages}">
+                        <c:set var="endPage" value="${totalPages}"/>
+                    </c:if>
+
+                    <c:forEach begin="${startPage}" end="${endPage}" var="i">
                         <li class="page-item <c:if test="${currentPage == i}">active</c:if>">
                             <a class="page-link" href="products?page=${i}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">${i}</a>
                         </li>
                     </c:forEach>
 
+                    <!-- Многоточие если страниц больше -->
+                    <c:if test="${endPage < totalPages}">
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="products?page=${totalPages}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">${totalPages}</a>
+                        </li>
+                    </c:if>
+
+                    <!-- Стрелка "Вперед" -->
                     <li class="page-item <c:if test="${currentPage == totalPages}">disabled</c:if>">
-                        <a class="page-link" href="products?page=${currentPage + 1}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">Следующая</a>
+                        <a class="page-link" href="products?page=${currentPage + 1}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
                     </li>
                 </ul>
             </nav>
+
+            <!-- Информация о текущей позиции -->
+            <div class="text-center text-muted mt-2">
+                Страница ${currentPage} из ${totalPages} • Показано ${products.size()} товаров из ${totalRecords}
+            </div>
         </c:if>
     </div>
 </div>

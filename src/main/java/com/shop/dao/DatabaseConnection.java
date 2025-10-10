@@ -5,10 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    private static final String URL = "jdbc:mysql://localhost:3306/shopbd";
+    private static final String URL = "jdbc:mysql://localhost:3306/shopbd?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC";
     private static final String USER = "root";
-    //    private static final String PASSWORD = "gfhjkm";
-    private static final String PASSWORD = "jhfy;tdsqcbybqdfyzdbnz";
+    private static final String PASSWORD = "gfhjkm";
 
     static {
         try {

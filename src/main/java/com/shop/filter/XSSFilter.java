@@ -15,6 +15,10 @@ public class XSSFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
 
+        // Убедитесь, что кодировка установлена перед обработкой XSS
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+
         chain.doFilter(new XSSRequestWrapper((HttpServletRequest) request), response);
     }
 

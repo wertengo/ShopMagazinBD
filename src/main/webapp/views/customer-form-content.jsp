@@ -12,7 +12,8 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form action="customers" method="post" onsubmit="return validateForm(this)">
+                <!-- ПРОСТАЯ ФОРМА БЕЗ СЛОЖНОГО JAVASCRIPT -->
+                <form action="customers" method="post">
                     <c:if test="${customer != null}">
                         <input type="hidden" name="id" value="<c:out value='${customer.customerId}'/>">
                         <input type="hidden" name="action" value="update">

@@ -1,7 +1,6 @@
 package com.shop.dao;
 
 import com.shop.model.Product;
-import org.apache.commons.text.StringEscapeUtils;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -38,11 +37,11 @@ public class ProductDAO {
 
         if (name != null && !name.trim().isEmpty()) {
             sql.append(" AND product_name LIKE ?");
-            params.add("%" + StringEscapeUtils.escapeJava(name) + "%");
+            params.add("%" + name + "%");
         }
         if (code != null && !code.trim().isEmpty()) {
             sql.append(" AND code LIKE ?");
-            params.add("%" + StringEscapeUtils.escapeJava(code) + "%");
+            params.add("%" + code + "%");
         }
         if (available != null) {
             sql.append(" AND product_available = ?");
@@ -73,7 +72,48 @@ public class ProductDAO {
                 products.add(mapResultSetToProduct(rs));
             }
         }
-        return products;
+        return products; // ДОБАВЛЕН RETURN STATEMENT
+    }
+
+    public boolean addProduct(Product product) throws SQLException {
+        String sql = "INSERT INTO Product (code, product_name, product_price, product_length, " +
+                "product_quantity, product_available, product_description) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, product.getCode());
+            stmt.setString(2, product.getProductName());
+            stmt.setBigDecimal(3, product.getProductPrice());
+            stmt.setBigDecimal(4, product.getProductLength());
+            stmt.setInt(5, product.getProductQuantity());
+            stmt.setBoolean(6, product.getProductAvailable());
+            stmt.setString(7, product.getProductDescription());
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean updateProduct(Product product) throws SQLException {
+        String sql = "UPDATE Product SET code = ?, product_name = ?, product_price = ?, " +
+                "product_length = ?, product_quantity = ?, product_available = ?, " +
+                "product_description = ? WHERE product_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, product.getCode());
+            stmt.setString(2, product.getProductName());
+            stmt.setBigDecimal(3, product.getProductPrice());
+            stmt.setBigDecimal(4, product.getProductLength());
+            stmt.setInt(5, product.getProductQuantity());
+            stmt.setBoolean(6, product.getProductAvailable());
+            stmt.setString(7, product.getProductDescription());
+            stmt.setInt(8, product.getProductId());
+
+            return stmt.executeUpdate() > 0;
+        }
     }
 
     // Получить товар по ID
@@ -91,49 +131,6 @@ public class ProductDAO {
             }
         }
         return null;
-    }
-
-    // Добавить товар
-    public boolean addProduct(Product product) throws SQLException {
-        String sql = "INSERT INTO Product (code, product_name, product_price, product_length, " +
-                "product_quantity, product_available, product_description) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, StringEscapeUtils.escapeJava(product.getCode()));
-            stmt.setString(2, StringEscapeUtils.escapeJava(product.getProductName()));
-            stmt.setBigDecimal(3, product.getProductPrice());
-            stmt.setBigDecimal(4, product.getProductLength());
-            stmt.setInt(5, product.getProductQuantity());
-            stmt.setBoolean(6, product.getProductAvailable());
-            stmt.setString(7, StringEscapeUtils.escapeJava(product.getProductDescription()));
-
-            return stmt.executeUpdate() > 0;
-        }
-    }
-
-    // Обновить товар
-    public boolean updateProduct(Product product) throws SQLException {
-        String sql = "UPDATE Product SET code = ?, product_name = ?, product_price = ?, " +
-                "product_length = ?, product_quantity = ?, product_available = ?, " +
-                "product_description = ? WHERE product_id = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, StringEscapeUtils.escapeJava(product.getCode()));
-            stmt.setString(2, StringEscapeUtils.escapeJava(product.getProductName()));
-            stmt.setBigDecimal(3, product.getProductPrice());
-            stmt.setBigDecimal(4, product.getProductLength());
-            stmt.setInt(5, product.getProductQuantity());
-            stmt.setBoolean(6, product.getProductAvailable());
-            stmt.setString(7, StringEscapeUtils.escapeJava(product.getProductDescription()));
-            stmt.setInt(8, product.getProductId());
-
-            return stmt.executeUpdate() > 0;
-        }
     }
 
     // Удалить товар
