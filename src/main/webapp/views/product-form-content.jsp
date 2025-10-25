@@ -13,6 +13,9 @@
             </div>
             <div class="card-body">
                 <form action="products" method="post" onsubmit="return validateProductForm(this)">
+                    <!-- CSRF Protection -->
+                    <input type="hidden" name="csrfToken" value="${csrfToken}">
+
                     <c:if test="${product != null}">
                         <input type="hidden" name="id" value="<c:out value='${product.productId}'/>">
                         <input type="hidden" name="action" value="update">

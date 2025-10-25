@@ -7,7 +7,9 @@
 
     <display-name>Shop Management System</display-name>
 
-    <!-- Фильтр кодировки UTF-8 -->
+    <!-- Порядок фильтров важен! -->
+
+    <!-- 1. Character Encoding -->
     <filter>
         <filter-name>CharacterEncodingFilter</filter-name>
         <filter-class>com.shop.filter.CharacterEncodingFilter</filter-class>
@@ -16,16 +18,30 @@
             <param-value>UTF-8</param-value>
         </init-param>
     </filter>
+
+    <!-- 2. Security Headers -->
+    <filter>
+        <filter-name>SecurityFilter</filter-name>
+        <filter-class>com.shop.filter.SecurityFilter</filter-class>
+    </filter>
+
+    <!-- 3. XSS Protection -->
+    <filter>
+        <filter-name>XSSFilter</filter-name>
+        <filter-class>com.shop.filter.XSSFilter</filter-class>
+    </filter>
+
+    <!-- Mapping -->
     <filter-mapping>
         <filter-name>CharacterEncodingFilter</filter-name>
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
-    <!-- Фильтр для защиты от XSS -->
-    <filter>
-        <filter-name>XSSFilter</filter-name>
-        <filter-class>com.shop.filter.XSSFilter</filter-class>
-    </filter>
+    <filter-mapping>
+        <filter-name>SecurityFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <filter-mapping>
         <filter-name>XSSFilter</filter-name>
         <url-pattern>/*</url-pattern>

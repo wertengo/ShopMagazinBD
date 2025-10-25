@@ -12,8 +12,18 @@
                 </h5>
             </div>
             <div class="card-body">
-                <!-- ПРОСТАЯ ФОРМА БЕЗ СЛОЖНОГО JAVASCRIPT -->
+                <!-- Сообщения об ошибках -->
+                <c:if test="${not empty error}">
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i> ${error}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </c:if>
+
                 <form action="customers" method="post">
+                    <!-- CSRF Protection -->
+                    <input type="hidden" name="csrfToken" value="${csrfToken}">
+
                     <c:if test="${customer != null}">
                         <input type="hidden" name="id" value="<c:out value='${customer.customerId}'/>">
                         <input type="hidden" name="action" value="update">
@@ -27,28 +37,28 @@
                             <label for="firstName" class="form-label">Имя <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="firstName" name="firstName"
                                    value="<c:out value='${customer.customerName}'/>" required
-                                   maxlength="50">
+                                   maxlength="50" placeholder="Введите имя">
                         </div>
 
                         <div class="col-md-4">
                             <label for="lastName" class="form-label">Фамилия <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="lastName" name="lastName"
                                    value="<c:out value='${customer.customerLastName}'/>" required
-                                   maxlength="50">
+                                   maxlength="50" placeholder="Введите фамилию">
                         </div>
 
                         <div class="col-md-4">
                             <label for="surname" class="form-label">Отчество</label>
                             <input type="text" class="form-control" id="surname" name="surname"
                                    value="<c:out value='${customer.customerSurname}'/>"
-                                   maxlength="50">
+                                   maxlength="50" placeholder="Введите отчество">
                         </div>
 
                         <div class="col-md-6">
                             <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
                             <input type="email" class="form-control" id="email" name="email"
                                    value="<c:out value='${customer.customerEmail}'/>" required
-                                   maxlength="100">
+                                   maxlength="100" placeholder="example@mail.com">
                         </div>
 
                         <div class="col-md-6">
@@ -61,16 +71,23 @@
                         <div class="col-12">
                             <label for="address" class="form-label">Адрес <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="address" name="address"
-                                      rows="3" required maxlength="255"><c:out value="${customer.customerAddress}"/></textarea>
+                                      rows="3" required maxlength="255"
+                                      placeholder="Введите полный адрес"><c:out value="${customer.customerAddress}"/></textarea>
                         </div>
 
                         <div class="col-12">
                             <div class="d-flex justify-content-between">
-                                <a href="customers" class="btn btn-secondary">Отмена</a>
+                                <a href="customers" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Отмена
+                                </a>
                                 <button type="submit" class="btn btn-success">
                                     <c:choose>
-                                        <c:when test="${customer != null}">Обновить клиента</c:when>
-                                        <c:otherwise>Добавить клиента</c:otherwise>
+                                        <c:when test="${customer != null}">
+                                            <i class="fas fa-save"></i> Обновить клиента
+                                        </c:when>
+                                        <c:otherwise>
+                                            <i class="fas fa-plus"></i> Добавить клиента
+                                        </c:otherwise>
                                     </c:choose>
                                 </button>
                             </div>

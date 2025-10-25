@@ -2,6 +2,7 @@ package com.shop.controller;
 
 import com.shop.dao.OrderDAO;
 import com.shop.model.Order;
+import com.shop.util.SecurityLogger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -29,22 +30,15 @@ public class OrderServlet extends HttpServlet {
         if (action == null) action = "list";
 
         try {
-            switch (action) {
-                case "search":
-                    searchOrders(request, response);
-                    break;
-                default:
-                    listOrders(request, response);
-                    break;
+            if ("search".equals(action)) {
+                searchOrders(request, response);
+            } else {
+                listOrders(request, response);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
-            request.setAttribute("error", "Ошибка базы данных: " + e.getMessage());
-            request.getRequestDispatcher("/views/error.jsp").forward(request, response);
+            throw new ServletException("Database error", e);
         } catch (Exception e) {
-            e.printStackTrace();
-            request.setAttribute("error", "Ошибка приложения: " + e.getMessage());
-            request.getRequestDispatcher("/views/error.jsp").forward(request, response);
+            throw new ServletException("Application error", e);
         }
     }
 
@@ -63,13 +57,9 @@ public class OrderServlet extends HttpServlet {
                 listOrders(request, response);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
-            request.setAttribute("error", "Ошибка базы данных: " + e.getMessage());
-            request.getRequestDispatcher("/views/error.jsp").forward(request, response);
+            throw new ServletException("Database error", e);
         } catch (Exception e) {
-            e.printStackTrace();
-            request.setAttribute("error", "Ошибка приложения: " + e.getMessage());
-            request.getRequestDispatcher("/views/error.jsp").forward(request, response);
+            throw new ServletException("Application error", e);
         }
     }
 
@@ -136,6 +126,13 @@ public class OrderServlet extends HttpServlet {
             int orderId = Integer.parseInt(request.getParameter("id"));
             String status = request.getParameter("status");
 
+            // Дополнительная валидация
+            if (!isValidStatus(status)) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("Invalid status");
+                return;
+            }
+
             boolean success = orderDAO.updateOrderStatus(orderId, status);
 
             if (success) {
@@ -146,9 +143,21 @@ public class OrderServlet extends HttpServlet {
                 response.getWriter().write("Error updating status");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            SecurityLogger.logSecurityEvent("ORDER_STATUS_UPDATE_FAILED",
+                    "IP: " + request.getRemoteAddr() + ", Order: " + request.getParameter("id"));
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("Error: " + e.getMessage());
         }
     }
+
+    private boolean isValidStatus(String status) {
+        String[] allowedStatuses = {"Pending", "Processing", "Shipped", "Delivered", "Cancelled"};
+        for (String allowed : allowedStatuses) {
+            if (allowed.equals(status)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

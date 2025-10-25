@@ -2,6 +2,7 @@ package com.shop.controller;
 
 import com.shop.dao.ProductDAO;
 import com.shop.model.Product;
+import com.shop.util.SecurityLogger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -12,10 +13,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 
 @WebServlet("/products")
 public class ProductServlet extends HttpServlet {
     private ProductDAO productDAO;
+    private static final String CSRF_TOKEN_NAME = "csrfToken";
 
     @Override
     public void init() throws ServletException {
@@ -55,6 +58,19 @@ public class ProductServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        // CSRF защита для всех POST кроме search
+        if (!"search".equals(request.getParameter("action"))) {
+            String sessionToken = (String) request.getSession().getAttribute(CSRF_TOKEN_NAME);
+            String requestToken = request.getParameter("csrfToken");
+
+            if (sessionToken == null || !sessionToken.equals(requestToken)) {
+                SecurityLogger.logSecurityEvent("CSRF_ATTEMPT",
+                        "IP: " + request.getRemoteAddr() + ", Session: " + request.getSession().getId());
+                response.sendRedirect("products?error=Security+violation");
+                return;
+            }
+        }
 
         String action = request.getParameter("action");
         if (action == null) action = "list";
@@ -163,6 +179,11 @@ public class ProductServlet extends HttpServlet {
     private void showNewForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // CSRF токен
+        String csrfToken = generateCSRFToken();
+        request.getSession().setAttribute(CSRF_TOKEN_NAME, csrfToken);
+        request.setAttribute("csrfToken", csrfToken);
+
         request.setAttribute("activePage", "products");
         request.setAttribute("pageTitle", "Добавление товара");
         request.setAttribute("contentPage", "/views/product-form-content.jsp");
@@ -172,6 +193,11 @@ public class ProductServlet extends HttpServlet {
 
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, ServletException, IOException {
+
+        // CSRF токен
+        String csrfToken = generateCSRFToken();
+        request.getSession().setAttribute(CSRF_TOKEN_NAME, csrfToken);
+        request.setAttribute("csrfToken", csrfToken);
 
         int id = Integer.parseInt(request.getParameter("id"));
         Product product = productDAO.getProductById(id);
@@ -183,22 +209,49 @@ public class ProductServlet extends HttpServlet {
         request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
     }
 
-    private void insertProduct(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
+    private String generateCSRFToken() {
+        return UUID.randomUUID().toString();
+    }
 
-        Product product = extractProductFromRequest(request);
-        productDAO.addProduct(product);
-        response.sendRedirect("products?message=Product added successfully");
+    private void insertProduct(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException, ServletException {
+
+        try {
+            Product product = extractProductFromRequest(request);
+            boolean success = productDAO.addProduct(product);
+
+            if (success) {
+                response.sendRedirect("products?message=Product+added+successfully");
+            } else {
+                request.setAttribute("error", "Ошибка при добавлении товара");
+                showNewForm(request, response);
+            }
+        } catch (Exception e) {
+            request.setAttribute("error", "Ошибка при добавлении товара: " + e.getMessage());
+            showNewForm(request, response);
+        }
     }
 
     private void updateProduct(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException {
+            throws SQLException, IOException, ServletException {
 
-        int id = Integer.parseInt(request.getParameter("id"));
-        Product product = extractProductFromRequest(request);
-        product.setProductId(id);
-        productDAO.updateProduct(product);
-        response.sendRedirect("products?message=Product updated successfully");
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Product product = extractProductFromRequest(request);
+            product.setProductId(id);
+            boolean success = productDAO.updateProduct(product);
+
+            if (success) {
+                response.sendRedirect("products?message=Product+updated+successfully");
+            } else {
+                request.setAttribute("error", "Ошибка при обновлении товара");
+                request.setAttribute("product", product);
+                showEditForm(request, response);
+            }
+        } catch (Exception e) {
+            request.setAttribute("error", "Ошибка при обновлении товара: " + e.getMessage());
+            showEditForm(request, response);
+        }
     }
 
     private void deleteProduct(HttpServletRequest request, HttpServletResponse response)
@@ -224,56 +277,50 @@ public class ProductServlet extends HttpServlet {
     private Product extractProductFromRequest(HttpServletRequest request) {
         Product product = new Product();
 
-        // Валидация и установка значений
         String code = request.getParameter("code");
-        if (code != null && !code.trim().isEmpty()) {
-            product.setCode(code.trim());
-        }
-
         String name = request.getParameter("name");
-        if (name != null && !name.trim().isEmpty()) {
-            product.setProductName(name.trim());
-        }
-
         String priceStr = request.getParameter("price");
-        if (priceStr != null && !priceStr.isEmpty()) {
-            try {
-                product.setProductPrice(new BigDecimal(priceStr));
-            } catch (NumberFormatException e) {
-                product.setProductPrice(BigDecimal.ZERO);
-            }
-        }
-
         String lengthStr = request.getParameter("length");
-        if (lengthStr != null && !lengthStr.isEmpty()) {
-            try {
-                product.setProductLength(new BigDecimal(lengthStr));
-            } catch (NumberFormatException e) {
-                product.setProductLength(null);
-            }
-        }
-
         String quantityStr = request.getParameter("quantity");
-        if (quantityStr != null && !quantityStr.isEmpty()) {
-            try {
-                product.setProductQuantity(Integer.parseInt(quantityStr));
-            } catch (NumberFormatException e) {
-                product.setProductQuantity(0);
-            }
-        }
-
         String availableStr = request.getParameter("available");
-        if (availableStr != null && !availableStr.isEmpty()) {
-            product.setProductAvailable(Boolean.parseBoolean(availableStr));
-        } else {
-            product.setProductAvailable(false);
+        String description = request.getParameter("description");
+
+        // Валидация данных
+        if (!isValidCode(code) || !isValidName(name)) {
+            SecurityLogger.logSecurityEvent("PRODUCT_VALIDATION_FAILED",
+                    "IP: " + request.getRemoteAddr() + ", Data: " + code + "," + name);
+            throw new IllegalArgumentException("Invalid input data");
         }
 
-        String description = request.getParameter("description");
-        if (description != null && !description.trim().isEmpty()) {
-            product.setProductDescription(description.trim());
+        product.setCode(code.trim());
+        product.setProductName(name.trim());
+
+        // Обработка числовых полей
+        try {
+            if (priceStr != null && !priceStr.isEmpty()) {
+                product.setProductPrice(new BigDecimal(priceStr));
+            }
+            if (lengthStr != null && !lengthStr.isEmpty()) {
+                product.setProductLength(new BigDecimal(lengthStr));
+            }
+            if (quantityStr != null && !quantityStr.isEmpty()) {
+                product.setProductQuantity(Integer.parseInt(quantityStr));
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid numeric format");
         }
+
+        product.setProductAvailable(availableStr != null && Boolean.parseBoolean(availableStr));
+        product.setProductDescription(description != null ? description.trim() : "");
 
         return product;
+    }
+
+    private boolean isValidCode(String code) {
+        return code != null && code.matches("[a-zA-Z0-9-]{2,20}");
+    }
+
+    private boolean isValidName(String name) {
+        return name != null && name.matches("[a-zA-Zа-яА-ЯёЁ0-9\\s-]{2,100}");
     }
 }

@@ -1,0 +1,26 @@
+Тестирование XSS защиты:
+
+<script>alert('XSS')</script>
+<img src="x" onerror="alert('XSS')">
+javascript:alert('XSS')
+
+    запрос в бд
+    SELECT * FROM Customer WHERE customer_name LIKE '%script%';
+
+Тестирование SQL инъекций:
+
+' OR '1'='1
+'; DROP TABLE Customer; --
+admin' --
+
+    запрос в бд
+    '; SELECT * FROM Customer; --
+
+Тестирование параметров URL
+http://localhost:8080/TestWebApplication_war_exploded/customers?action=delete&id=1<script>alert()</script>
+
+Тест SQL инъекций через поиск:
+curl -X POST http://localhost:8080/TestWebApplication_war_exploded/customers \ -d "action=search&name=' OR '1'='1"
+
+Проверка HTTP заголовков:
+curl -I http://localhost:8080/TestWebApplication_war_exploded/dashboard

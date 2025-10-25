@@ -1,6 +1,7 @@
 package com.shop.dao;
 
 import com.shop.model.Order;
+import com.shop.util.SecurityLogger;
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.sql.*;
@@ -41,17 +42,26 @@ public class OrderDAO {
         List<Object> params = new ArrayList<>();
 
         if (orderNumber != null && !orderNumber.trim().isEmpty()) {
+            if (!isValidSqlParameter(orderNumber)) {
+                throw new SQLException("Invalid search parameter");
+            }
             sql.append(" AND o.order_number LIKE ?");
-            params.add("%" + StringEscapeUtils.escapeJava(orderNumber) + "%");
+            params.add("%" + orderNumber + "%");
         }
         if (status != null && !status.trim().isEmpty()) {
+            if (!isValidSqlParameter(status)) {
+                throw new SQLException("Invalid search parameter");
+            }
             sql.append(" AND o.order_status = ?");
-            params.add(StringEscapeUtils.escapeJava(status));
+            params.add(status);
         }
         if (customerName != null && !customerName.trim().isEmpty()) {
+            if (!isValidSqlParameter(customerName)) {
+                throw new SQLException("Invalid search parameter");
+            }
             sql.append(" AND (c.customer_name LIKE ? OR c.customer_lastName LIKE ?)");
-            params.add("%" + StringEscapeUtils.escapeJava(customerName) + "%");
-            params.add("%" + StringEscapeUtils.escapeJava(customerName) + "%");
+            params.add("%" + customerName + "%");
+            params.add("%" + customerName + "%");
         }
 
         sql.append(" ORDER BY o.order_id LIMIT ? OFFSET ?");
@@ -73,13 +83,32 @@ public class OrderDAO {
         return orders;
     }
 
+
     public boolean updateOrderStatus(int orderId, String status) throws SQLException {
+        // Валидация статуса
+        String[] allowedStatuses = {"Pending", "Processing", "Shipped", "Delivered", "Cancelled"};
+        boolean validStatus = false;
+        for (String allowed : allowedStatuses) {
+            if (allowed.equals(status)) {
+                validStatus = true;
+                break;
+            }
+        }
+
+        if (!validStatus) {
+            throw new SQLException("Invalid order status");
+        }
+
+        if (!isValidSqlParameter(status)) {
+            throw new SQLException("Invalid status parameter");
+        }
+
         String sql = "UPDATE `Order` SET order_status = ?, order_status_changed_date = NOW() WHERE order_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, StringEscapeUtils.escapeJava(status));
+            stmt.setString(1, status);
             stmt.setInt(2, orderId);
 
             return stmt.executeUpdate() > 0;
@@ -124,6 +153,26 @@ public class OrderDAO {
             }
         }
         return stats;
+    }
+
+    private boolean isValidSqlParameter(String param) {
+        if (param == null) return true;
+        String[] sqlKeywords = {"SELECT", "INSERT", "DELETE", "UPDATE", "DROP", "UNION", "OR", "AND", "--", "/*", "*/", ";", "'", "\"", "`", "EXEC", "EXECUTE"};
+        String upperParam = param.toUpperCase();
+        for (String keyword : sqlKeywords) {
+            if (upperParam.contains(keyword)) {
+                SecurityLogger.logSqlInjectionAttempt("N/A", param);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isValidOrderData(Order order) {
+        return isValidSqlParameter(order.getOrderNumber()) &&
+                isValidSqlParameter(order.getOrderPaymentMethod()) &&
+                isValidSqlParameter(order.getOrderStatus()) &&
+                isValidSqlParameter(order.getOrderShippingAddress());
     }
 
     private Order mapResultSetToOrder(ResultSet rs) throws SQLException {

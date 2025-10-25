@@ -1,6 +1,32 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+
+<!-- Сообщения об успехе/ошибке -->
+<c:if test="${not empty message}">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i>
+        <c:choose>
+            <c:when test="${message == 'Product added successfully'}">Товар успешно добавлен</c:when>
+            <c:when test="${message == 'Product updated successfully'}">Товар успешно обновлен</c:when>
+            <c:when test="${message == 'Product deleted successfully'}">Товар успешно удален</c:when>
+            <c:otherwise>${message}</c:otherwise>
+        </c:choose>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
+<c:if test="${not empty error}">
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <c:choose>
+            <c:when test="${error == 'Security violation'}">Нарушение безопасности</c:when>
+            <c:otherwise>${error}</c:otherwise>
+        </c:choose>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
 <div class="d-flex justify-content-between mb-3">
     <div>
         <a href="products?action=statistics" class="btn btn-info me-2">
@@ -25,12 +51,15 @@
             <div class="col-md-3">
                 <label for="searchName" class="form-label">Название</label>
                 <input type="text" class="form-control" id="searchName" name="name"
-                       value="<c:out value='${searchName}'/>" placeholder="Введите название">
+                       value="<c:out value='${searchName}'/>" placeholder="Введите название"
+                       maxlength="100">
             </div>
             <div class="col-md-2">
                 <label for="searchCode" class="form-label">Код</label>
                 <input type="text" class="form-control" id="searchCode" name="code"
-                       value="<c:out value='${searchCode}'/>" placeholder="Код товара">
+                       value="<c:out value='${searchCode}'/>" placeholder="Код товара"
+                       pattern="[A-Za-z0-9-]*" title="Только буквы, цифры и дефисы"
+                       maxlength="20">
             </div>
             <div class="col-md-2">
                 <label for="searchAvailable" class="form-label">Доступность</label>
@@ -43,12 +72,12 @@
             <div class="col-md-2">
                 <label for="searchMinPrice" class="form-label">Мин. цена</label>
                 <input type="number" class="form-control" id="searchMinPrice" name="minPrice"
-                       value="<c:out value='${searchMinPrice}'/>" placeholder="0" step="0.01">
+                       value="<c:out value='${searchMinPrice}'/>" placeholder="0" step="0.01" min="0">
             </div>
             <div class="col-md-2">
                 <label for="searchMaxPrice" class="form-label">Макс. цена</label>
                 <input type="number" class="form-control" id="searchMaxPrice" name="maxPrice"
-                       value="<c:out value='${searchMaxPrice}'/>" placeholder="100000" step="0.01">
+                       value="<c:out value='${searchMaxPrice}'/>" placeholder="100000" step="0.01" min="0">
             </div>
             <div class="col-md-1 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
@@ -83,11 +112,11 @@
                 <c:forEach var="product" items="${products}">
                     <tr>
                         <td>${product.productId}</td>
-                        <td>${product.code}</td>
+                        <td><c:out value="${product.code}"/></td>
                         <td>
-                                ${product.productName}
+                            <c:out value="${product.productName}"/>
                             <c:if test="${not empty product.productDescription}">
-                                <br><small class="text-muted">${product.productDescription}</small>
+                                <br><small class="text-muted"><c:out value="${product.productDescription}"/></small>
                             </c:if>
                         </td>
                         <td><fmt:formatNumber value="${product.productPrice}" pattern="#,##0.00"/> ₽</td>
@@ -114,7 +143,7 @@
                             </a>
                             <a href="products?action=delete&id=${product.productId}"
                                class="btn btn-sm btn-outline-danger"
-                               onclick="return confirmDelete('Удалить товар &quot;${product.productName}&quot;?')">
+                               onclick="return confirmDelete('Удалить товар &quot;<c:out value="${product.productName}"/>&quot;?')">
                                 <i class="fas fa-trash"></i>
                             </a>
                         </td>
@@ -138,7 +167,7 @@
                 <ul class="pagination justify-content-center">
                     <!-- Стрелка "Назад" -->
                     <li class="page-item <c:if test="${currentPage == 1}">disabled</c:if>">
-                        <a class="page-link" href="products?page=${currentPage - 1}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">
+                        <a class="page-link" href="products?page=${currentPage - 1}<c:if test="${not empty searchName}">&name=<c:out value="${searchName}"/></c:if><c:if test="${not empty searchCode}">&code=<c:out value="${searchCode}"/></c:if>">
                             <i class="fas fa-chevron-left"></i>
                         </a>
                     </li>
@@ -146,7 +175,7 @@
                     <!-- Первая страница -->
                     <c:if test="${currentPage > 6}">
                         <li class="page-item">
-                            <a class="page-link" href="products?page=1<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">1</a>
+                            <a class="page-link" href="products?page=1<c:if test="${not empty searchName}">&name=<c:out value="${searchName}"/></c:if><c:if test="${not empty searchCode}">&code=<c:out value="${searchCode}"/></c:if>">1</a>
                         </li>
                         <li class="page-item disabled">
                             <span class="page-link">...</span>
@@ -167,7 +196,7 @@
 
                     <c:forEach begin="${startPage}" end="${endPage}" var="i">
                         <li class="page-item <c:if test="${currentPage == i}">active</c:if>">
-                            <a class="page-link" href="products?page=${i}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">${i}</a>
+                            <a class="page-link" href="products?page=${i}<c:if test="${not empty searchName}">&name=<c:out value="${searchName}"/></c:if><c:if test="${not empty searchCode}">&code=<c:out value="${searchCode}"/></c:if>">${i}</a>
                         </li>
                     </c:forEach>
 
@@ -177,13 +206,13 @@
                             <span class="page-link">...</span>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="products?page=${totalPages}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">${totalPages}</a>
+                            <a class="page-link" href="products?page=${totalPages}<c:if test="${not empty searchName}">&name=<c:out value="${searchName}"/></c:if><c:if test="${not empty searchCode}">&code=<c:out value="${searchCode}"/></c:if>">${totalPages}</a>
                         </li>
                     </c:if>
 
                     <!-- Стрелка "Вперед" -->
                     <li class="page-item <c:if test="${currentPage == totalPages}">disabled</c:if>">
-                        <a class="page-link" href="products?page=${currentPage + 1}<c:if test="${not empty searchName}">&name=${searchName}</c:if><c:if test="${not empty searchCode}">&code=${searchCode}</c:if>">
+                        <a class="page-link" href="products?page=${currentPage + 1}<c:if test="${not empty searchName}">&name=<c:out value="${searchName}"/></c:if><c:if test="${not empty searchCode}">&code=<c:out value="${searchCode}"/></c:if>">
                             <i class="fas fa-chevron-right"></i>
                         </a>
                     </li>

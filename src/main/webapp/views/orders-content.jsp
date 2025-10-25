@@ -1,6 +1,26 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+
+<!-- Сообщения об успехе/ошибке -->
+<c:if test="${not empty message}">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle"></i>
+        <c:choose>
+            <c:when test="${message == 'Order status updated successfully'}">Статус заказа успешно обновлен</c:when>
+            <c:otherwise>${message}</c:otherwise>
+        </c:choose>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
+<c:if test="${not empty error}">
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i> ${error}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
 <!-- Форма поиска -->
 <div class="card mb-4">
     <div class="card-header">
@@ -12,7 +32,8 @@
             <div class="col-md-3">
                 <label for="searchOrderNumber" class="form-label">Номер заказа</label>
                 <input type="text" class="form-control" id="searchOrderNumber" name="orderNumber"
-                       value="<c:out value='${searchOrderNumber}'/>" placeholder="Введите номер заказа">
+                       value="<c:out value='${searchOrderNumber}'/>" placeholder="Введите номер заказа"
+                       maxlength="50" pattern="[A-Za-z0-9-]*" title="Только буквы, цифры и дефисы">
             </div>
             <div class="col-md-3">
                 <label for="searchStatus" class="form-label">Статус</label>
@@ -28,7 +49,8 @@
             <div class="col-md-4">
                 <label for="searchCustomerName" class="form-label">Клиент</label>
                 <input type="text" class="form-control" id="searchCustomerName" name="customerName"
-                       value="<c:out value='${searchCustomerName}'/>" placeholder="Введите имя клиента">
+                       value="<c:out value='${searchCustomerName}'/>" placeholder="Введите имя клиента"
+                       maxlength="100">
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
@@ -64,8 +86,8 @@
                 <c:forEach var="order" items="${orders}">
                     <tr>
                         <td>${order.orderId}</td>
-                        <td>${order.orderNumber}</td>
-                        <td>${order.customerName}</td>
+                        <td><c:out value="${order.orderNumber}"/></td>
+                        <td><c:out value="${order.customerName}"/></td>
                         <td><fmt:formatDate value="${order.orderDate}" pattern="dd.MM.yyyy HH:mm"/></td>
                         <td><fmt:formatNumber value="${order.orderCost}" pattern="#,##0.00"/> ₽</td>
                         <td>
@@ -78,10 +100,10 @@
                                         <c:when test="${order.orderStatus == 'Cancelled'}">bg-danger</c:when>
                                         <c:otherwise>bg-secondary</c:otherwise>
                                     </c:choose>">
-                                        ${order.orderStatus}
+                                        <c:out value="${order.orderStatus}"/>
                                 </span>
                         </td>
-                        <td>${order.orderPaymentMethod}</td>
+                        <td><c:out value="${order.orderPaymentMethod}"/></td>
                         <td class="table-actions">
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
@@ -137,20 +159,31 @@
             <nav aria-label="Page navigation">
                 <ul class="pagination justify-content-center">
                     <li class="page-item <c:if test="${currentPage == 1}">disabled</c:if>">
-                        <a class="page-link" href="orders?page=${currentPage - 1}">Предыдущая</a>
+                        <a class="page-link" href="orders?page=${currentPage - 1}<c:if test="${not empty searchOrderNumber}">&orderNumber=<c:out value="${searchOrderNumber}"/></c:if><c:if test="${not empty searchStatus}">&status=<c:out value="${searchStatus}"/></c:if><c:if test="${not empty searchCustomerName}">&customerName=<c:out value="${searchCustomerName}"/></c:if>">
+                            Предыдущая
+                        </a>
                     </li>
 
                     <c:forEach begin="1" end="${totalPages}" var="i">
                         <li class="page-item <c:if test="${currentPage == i}">active</c:if>">
-                            <a class="page-link" href="orders?page=${i}">${i}</a>
+                            <a class="page-link" href="orders?page=${i}<c:if test="${not empty searchOrderNumber}">&orderNumber=<c:out value="${searchOrderNumber}"/></c:if><c:if test="${not empty searchStatus}">&status=<c:out value="${searchStatus}"/></c:if><c:if test="${not empty searchCustomerName}">&customerName=<c:out value="${searchCustomerName}"/></c:if>">
+                                    ${i}
+                            </a>
                         </li>
                     </c:forEach>
 
                     <li class="page-item <c:if test="${currentPage == totalPages}">disabled</c:if>">
-                        <a class="page-link" href="orders?page=${currentPage + 1}">Следующая</a>
+                        <a class="page-link" href="orders?page=${currentPage + 1}<c:if test="${not empty searchOrderNumber}">&orderNumber=<c:out value="${searchOrderNumber}"/></c:if><c:if test="${not empty searchStatus}">&status=<c:out value="${searchStatus}"/></c:if><c:if test="${not empty searchCustomerName}">&customerName=<c:out value="${searchCustomerName}"/></c:if>">
+                            Следующая
+                        </a>
                     </li>
                 </ul>
             </nav>
+
+            <!-- Информация о текущей позиции -->
+            <div class="text-center text-muted mt-2">
+                Страница ${currentPage} из ${totalPages} • Показано ${orders.size()} заказов из ${totalRecords}
+            </div>
         </c:if>
     </div>
 </div>
@@ -165,9 +198,12 @@
             'Cancelled': 'Отменен'
         };
 
-        if (confirm(`Изменить статус заказа на \"${statusNames[status]}\"?`)) {
-            fetch('orders?action=updateStatus&id=' + orderId + '&status=' + status, {
-                method: 'POST'
+        if (confirm('Изменить статус заказа на \"' + statusNames[status] + '\"?')) {
+            fetch('orders?action=updateStatus&id=' + orderId + '&status=' + encodeURIComponent(status), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
             }).then(response => {
                 if (response.ok) {
                     location.reload();

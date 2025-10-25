@@ -1,6 +1,7 @@
 package com.shop.dao;
 
 import com.shop.model.Product;
+import com.shop.util.SecurityLogger;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -36,10 +37,17 @@ public class ProductDAO {
         List<Object> params = new ArrayList<>();
 
         if (name != null && !name.trim().isEmpty()) {
+            // Валидация параметра поиска
+            if (!isValidSqlParameter(name)) {
+                throw new SQLException("Invalid search parameter");
+            }
             sql.append(" AND product_name LIKE ?");
             params.add("%" + name + "%");
         }
         if (code != null && !code.trim().isEmpty()) {
+            if (!isValidSqlParameter(code)) {
+                throw new SQLException("Invalid search parameter");
+            }
             sql.append(" AND code LIKE ?");
             params.add("%" + code + "%");
         }
@@ -72,10 +80,29 @@ public class ProductDAO {
                 products.add(mapResultSetToProduct(rs));
             }
         }
-        return products; // ДОБАВЛЕН RETURN STATEMENT
+        return products;
     }
 
     public boolean addProduct(Product product) throws SQLException {
+        // Валидация данных перед вставкой
+        if (!isValidProductData(product)) {
+            throw new SQLException("Invalid product data - potential SQL injection attempt");
+        }
+
+        // Проверка на дубликат кода товара
+        String checkSql = "SELECT COUNT(*) FROM Product WHERE code = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+
+            checkStmt.setString(1, product.getCode());
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next() && rs.getInt(1) > 0) {
+                throw new SQLException("Товар с кодом " + product.getCode() + " уже существует");
+            }
+        }
+
         String sql = "INSERT INTO Product (code, product_name, product_price, product_length, " +
                 "product_quantity, product_available, product_description) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -96,6 +123,26 @@ public class ProductDAO {
     }
 
     public boolean updateProduct(Product product) throws SQLException {
+        // Валидация данных
+        if (!isValidProductData(product)) {
+            throw new SQLException("Invalid product data - potential SQL injection attempt");
+        }
+
+        // Проверка на дубликат кода товара (исключая текущий товар)
+        String checkSql = "SELECT COUNT(*) FROM Product WHERE code = ? AND product_id != ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+
+            checkStmt.setString(1, product.getCode());
+            checkStmt.setInt(2, product.getProductId());
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next() && rs.getInt(1) > 0) {
+                throw new SQLException("Товар с кодом " + product.getCode() + " уже существует");
+            }
+        }
+
         String sql = "UPDATE Product SET code = ?, product_name = ?, product_price = ?, " +
                 "product_length = ?, product_quantity = ?, product_available = ?, " +
                 "product_description = ? WHERE product_id = ?";
@@ -115,6 +162,7 @@ public class ProductDAO {
             return stmt.executeUpdate() > 0;
         }
     }
+
 
     // Получить товар по ID
     public Product getProductById(int id) throws SQLException {
@@ -186,6 +234,26 @@ public class ProductDAO {
             }
         }
         return stats;
+    }
+
+    // Валидация SQL параметров
+    private boolean isValidSqlParameter(String param) {
+        if (param == null) return true;
+        String[] sqlKeywords = {"SELECT", "INSERT", "DELETE", "UPDATE", "DROP", "UNION", "OR", "AND", "--", "/*", "*/", ";", "'", "\"", "`", "EXEC", "EXECUTE"};
+        String upperParam = param.toUpperCase();
+        for (String keyword : sqlKeywords) {
+            if (upperParam.contains(keyword)) {
+                SecurityLogger.logSqlInjectionAttempt("N/A", param);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isValidProductData(Product product) {
+        return isValidSqlParameter(product.getCode()) &&
+                isValidSqlParameter(product.getProductName()) &&
+                isValidSqlParameter(product.getProductDescription());
     }
 
     private Product mapResultSetToProduct(ResultSet rs) throws SQLException {

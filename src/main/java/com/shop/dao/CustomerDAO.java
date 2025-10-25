@@ -1,6 +1,7 @@
 package com.shop.dao;
 
 import com.shop.model.Customer;
+import com.shop.util.SecurityLogger;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -81,9 +82,13 @@ public class CustomerDAO {
         return null;
     }
 
-    // Добавить клиента
-    // Добавить клиента с проверкой на дубликаты
+    //добавляем клиента
     public boolean addCustomer(Customer customer) throws SQLException {
+        // Валидация данных перед вставкой
+        if (!isValidCustomerData(customer)) {
+            throw new SQLException("Invalid customer data - potential SQL injection attempt");
+        }
+
         // Сначала проверяем, нет ли клиента с таким email
         String checkSql = "SELECT COUNT(*) FROM Customer WHERE customer_email = ?";
 
@@ -128,6 +133,26 @@ public class CustomerDAO {
 
     // Обновить клиента
     public boolean updateCustomer(Customer customer) throws SQLException {
+        // Валидация данных
+        if (!isValidCustomerData(customer)) {
+            throw new SQLException("Invalid customer data - potential SQL injection attempt");
+        }
+
+        // Проверяем, не занят ли email другим клиентом
+        String checkSql = "SELECT COUNT(*) FROM Customer WHERE customer_email = ? AND customer_id != ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+
+            checkStmt.setString(1, customer.getCustomerEmail());
+            checkStmt.setInt(2, customer.getCustomerId());
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next() && rs.getInt(1) > 0) {
+                throw new SQLException("Клиент с email " + customer.getCustomerEmail() + " уже существует");
+            }
+        }
+
         String sql = "UPDATE Customer SET customer_name = ?, customer_lastName = ?, customer_surname = ?, " +
                 "customer_address = ?, customer_phoneNumber = ?, customer_email = ? " +
                 "WHERE customer_id = ?";
@@ -147,7 +172,6 @@ public class CustomerDAO {
         }
     }
 
-    // Удалить клиента
     // Удалить клиента
     public boolean deleteCustomer(int id) throws SQLException {
         String sql = "DELETE FROM Customer WHERE customer_id = ?";
@@ -182,6 +206,30 @@ public class CustomerDAO {
             }
         }
         return 0;
+    }
+
+
+
+    private boolean isValidSqlParameter(String param) {
+        if (param == null) return true;
+        // Запрещаем SQL ключевые слова
+        String[] sqlKeywords = {"SELECT", "INSERT", "DELETE", "UPDATE", "DROP", "UNION", "OR", "AND", "--", "/*", "*/", ";", "'", "\"", "`", "EXEC", "EXECUTE"};
+        String upperParam = param.toUpperCase();
+        for (String keyword : sqlKeywords) {
+            if (upperParam.contains(keyword)) {
+                SecurityLogger.logSqlInjectionAttempt("N/A", param);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isValidCustomerData(Customer customer) {
+        return isValidSqlParameter(customer.getCustomerName()) &&
+                isValidSqlParameter(customer.getCustomerLastName()) &&
+                isValidSqlParameter(customer.getCustomerEmail()) &&
+                isValidSqlParameter(customer.getCustomerPhoneNumber()) &&
+                isValidSqlParameter(customer.getCustomerAddress());
     }
 
     // Преобразование ResultSet в объект Customer

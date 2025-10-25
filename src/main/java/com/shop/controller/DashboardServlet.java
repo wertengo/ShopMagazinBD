@@ -3,6 +3,7 @@ package com.shop.controller;
 import com.shop.dao.CustomerDAO;
 import com.shop.dao.OrderDAO;
 import com.shop.dao.ProductDAO;
+import com.shop.util.SecurityLogger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -29,6 +30,10 @@ public class DashboardServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // Логируем доступ к дашборду
+        SecurityLogger.logSecurityEvent("DASHBOARD_ACCESS",
+                "IP: " + request.getRemoteAddr() + ", Session: " + request.getSession().getId());
+
         try {
             // Получаем статистику
             ProductDAO.ProductStatistics productStats = productDAO.getProductStatistics();
@@ -45,11 +50,13 @@ public class DashboardServlet extends HttpServlet {
             request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            SecurityLogger.logSecurityEvent("DASHBOARD_ERROR",
+                    "IP: " + request.getRemoteAddr() + ", Error: " + e.getMessage());
             request.setAttribute("error", "Ошибка базы данных: " + e.getMessage());
             request.getRequestDispatcher("/views/error.jsp").forward(request, response);
         } catch (Exception e) {
-            e.printStackTrace();
+            SecurityLogger.logSecurityEvent("DASHBOARD_ERROR",
+                    "IP: " + request.getRemoteAddr() + ", Error: " + e.getMessage());
             request.setAttribute("error", "Ошибка приложения: " + e.getMessage());
             request.getRequestDispatcher("/views/error.jsp").forward(request, response);
         }
@@ -58,11 +65,9 @@ public class DashboardServlet extends HttpServlet {
     // Вспомогательный класс для статистики клиентов
     public static class CustomerStatistics {
         private int totalCustomers;
-
         public CustomerStatistics(int totalCustomers) {
             this.totalCustomers = totalCustomers;
         }
-
         public int getTotalCustomers() {
             return totalCustomers;
         }

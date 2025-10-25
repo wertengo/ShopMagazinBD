@@ -2,6 +2,7 @@ package com.shop.controller;
 
 import com.shop.dao.CustomerDAO;
 import com.shop.model.Customer;
+import com.shop.util.SecurityLogger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -11,10 +12,12 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 
 @WebServlet("/customers")
 public class CustomerServlet extends HttpServlet {
     private CustomerDAO customerDAO;
+    private static final String CSRF_TOKEN_NAME = "csrfToken";
 
     @Override
     public void init() throws ServletException {
@@ -52,6 +55,19 @@ public class CustomerServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // CSRF защита
+        if (!"search".equals(request.getParameter("action"))) {
+            String sessionToken = (String) request.getSession().getAttribute(CSRF_TOKEN_NAME);
+            String requestToken = request.getParameter("csrfToken");
+
+            if (sessionToken == null || !sessionToken.equals(requestToken)) {
+                SecurityLogger.logSecurityEvent("CSRF_ATTEMPT",
+                        "IP: " + request.getRemoteAddr() + ", Session: " + request.getSession().getId());
+                response.sendRedirect("customers?error=Security+violation");
+                return;
+            }
+        }
+
         String action = request.getParameter("action");
         if (action == null) action = "list";
 
@@ -74,6 +90,7 @@ public class CustomerServlet extends HttpServlet {
             throw new ServletException("Database error", e);
         }
     }
+
 
     private void listCustomers(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, ServletException, IOException {
@@ -134,6 +151,11 @@ public class CustomerServlet extends HttpServlet {
     private void showNewForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // Генерация CSRF токена
+        String csrfToken = generateCSRFToken();
+        request.getSession().setAttribute(CSRF_TOKEN_NAME, csrfToken);
+        request.setAttribute("csrfToken", csrfToken);
+
         request.setAttribute("activePage", "customers");
         request.setAttribute("pageTitle", "Добавление клиента");
         request.setAttribute("contentPage", "/views/customer-form-content.jsp");
@@ -144,6 +166,11 @@ public class CustomerServlet extends HttpServlet {
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, ServletException, IOException {
 
+        // Генерация CSRF токена
+        String csrfToken = generateCSRFToken();
+        request.getSession().setAttribute(CSRF_TOKEN_NAME, csrfToken);
+        request.setAttribute("csrfToken", csrfToken);
+
         int id = Integer.parseInt(request.getParameter("id"));
         Customer customer = customerDAO.getCustomerById(id);
         request.setAttribute("customer", customer);
@@ -152,6 +179,10 @@ public class CustomerServlet extends HttpServlet {
         request.setAttribute("contentPage", "/views/customer-form-content.jsp");
 
         request.getRequestDispatcher("/views/base-layout.jsp").forward(request, response);
+    }
+
+    private String generateCSRFToken() {
+        return UUID.randomUUID().toString();
     }
 
     private void insertCustomer(HttpServletRequest request, HttpServletResponse response)
@@ -242,7 +273,6 @@ public class CustomerServlet extends HttpServlet {
     private Customer extractCustomerFromRequest(HttpServletRequest request) {
         Customer customer = new Customer();
 
-        // Получаем данные из формы
         String firstName = request.getParameter("firstName");
         String lastName = request.getParameter("lastName");
         String surname = request.getParameter("surname");
@@ -250,22 +280,33 @@ public class CustomerServlet extends HttpServlet {
         String phone = request.getParameter("phone");
         String email = request.getParameter("email");
 
-        System.out.println("Параметры формы:");
-        System.out.println("firstName: " + firstName);
-        System.out.println("lastName: " + lastName);
-        System.out.println("surname: " + surname);
-        System.out.println("address: " + address);
-        System.out.println("phone: " + phone);
-        System.out.println("email: " + email);
+        // Валидация данных
+        if (!isValidName(firstName) || !isValidName(lastName) ||
+                !isValidEmail(email) || !isValidPhone(phone)) {
+            SecurityLogger.logSecurityEvent("VALIDATION_FAILED",
+                    "IP: " + request.getRemoteAddr() + ", Data: " + firstName + "," + lastName + "," + email);
+            throw new IllegalArgumentException("Invalid input data");
+        }
 
-        // Устанавливаем значения с проверкой на null
-        customer.setCustomerName(firstName != null ? firstName.trim() : "");
-        customer.setCustomerLastName(lastName != null ? lastName.trim() : "");
+        customer.setCustomerName(firstName.trim());
+        customer.setCustomerLastName(lastName.trim());
         customer.setCustomerSurname(surname != null ? surname.trim() : "");
         customer.setCustomerAddress(address != null ? address.trim() : "");
-        customer.setCustomerPhoneNumber(phone != null ? phone.trim() : "");
-        customer.setCustomerEmail(email != null ? email.trim() : "");
+        customer.setCustomerPhoneNumber(phone.trim());
+        customer.setCustomerEmail(email.trim());
 
         return customer;
+    }
+
+    private boolean isValidName(String name) {
+        return name != null && name.matches("[a-zA-Zа-яА-ЯёЁ\\s-]{2,50}");
+    }
+
+    private boolean isValidEmail(String email) {
+        return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    }
+
+    private boolean isValidPhone(String phone) {
+        return phone != null && phone.matches("[+0-9\\s()-]{10,20}");
     }
 }
